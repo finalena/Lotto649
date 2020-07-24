@@ -18,7 +18,6 @@ namespace WindowsFormsApplication1
             InitializeComponent();
 
             dtHistory = dt;
-
             this.dgvHistory.DataSource = new BindingSource(dtHistory, null);
             this.dgvHistory.Columns["兌獎截止(註6)"].HeaderText = "兌獎截止";
             this.dgvHistory.ColumnHeadersDefaultCellStyle.WrapMode = DataGridViewTriState.False;

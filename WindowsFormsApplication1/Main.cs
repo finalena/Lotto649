@@ -14,14 +14,9 @@ namespace WindowsFormsApplication1
 {
     public partial class Main : Form
     {
-        private WebClient webClient = new WebClient();
-        private MemoryStream memoryStream = null;
-
-        DataTable dtHistroy = null;
-        DataTable dtPickNum = null;
-        DataTable dtBettingArea = null;
-        CheckBox chkAll = new CheckBox();
-        CheckBox chkAll2 = new CheckBox();
+        WebClient webClient = new WebClient();
+        MemoryStream memoryStream = null;
+        DataTable dtLottoHistroy = null;
         
         public Main()
         {
@@ -29,13 +24,31 @@ namespace WindowsFormsApplication1
 
             IniData();
             GetLottoData();
-            
-            chkAll.MouseClick += new MouseEventHandler(chkAll_MouseClick);
-            chkAll2.MouseClick += new MouseEventHandler(chkAll_MouseClick);
-            this.dgvPickNumber.CellPainting += new DataGridViewCellPaintingEventHandler(dgvPickNumber_CellPainting);
-            this.dgvBetArea.CellPainting += new DataGridViewCellPaintingEventHandler(dgvPickNumber_CellPainting);
-            this.dgvPickNumber.CellContentClick += new DataGridViewCellEventHandler(dgvPickNumber_CellContentClick);
-            this.dgvBetArea.CellContentClick += new DataGridViewCellEventHandler(dgvPickNumber_CellContentClick);
+        }
+
+        private void IniData() 
+        {
+            List<Control> ctrList = GetAllControls(this.tabControl1);
+            foreach (Control ctr in ctrList)
+            {
+                if (ctr is ListView)
+                {
+                    ListView lv = (ListView)ctr;
+
+                    lv.GridLines = true;
+                    lv.FullRowSelect = true;
+                    lv.View = View.Details;
+                    lv.Scrollable = true;
+                    lv.MultiSelect = false;
+                    lv.CheckBoxes = true;
+                    lv.OwnerDraw = true;
+
+                    lv.DrawColumnHeader += new DrawListViewColumnHeaderEventHandler(ListView_DrawColumnHeader);
+                    lv.DrawItem += new DrawListViewItemEventHandler(ListView_DrawItem);
+                    lv.DrawSubItem += new DrawListViewSubItemEventHandler(ListView_DrawSubItem);
+                    lv.ColumnClick += new ColumnClickEventHandler(ListView_ColumnClick);
+                }
+            }
             this.btnToBettingArea.Click += new EventHandler(Button_Click);
             this.btnPickNumber.Click += new EventHandler(Button_Click);
             this.btnPickNumDel.Click += new EventHandler(Button_Click);
@@ -43,111 +56,51 @@ namespace WindowsFormsApplication1
             this.btnBetDel.Click += new EventHandler(Button_Click);
             this.btnBetDelAll.Click += new EventHandler(Button_Click);
             this.btnRedeem.Click += new EventHandler(Button_Click);
-            this.btnHistory.Click +=new EventHandler(Button_Click);
-        }
+            this.btnLottoHistory.Click += new EventHandler(Button_Click);
 
-        private void IniData() 
-        {
             this.lblDrawing.Text = "";
             this.lblDrawingSpcl.Text = "";
 
             //1.樂透選號
-            dtPickNum = new DataTable();
-            dtPickNum.Columns.Add("no");
-            dtPickNum.Columns.Add("item");
-            this.dgvPickNumber.DataSource = dtPickNum;
-            //建立DGV列首CheckBox欄
-            DataGridViewCheckBoxColumn cbCol = new DataGridViewCheckBoxColumn();
-            cbCol.ReadOnly = false;
-            cbCol.Width = 50;
-            cbCol.Name = "chkBxSelect";
-            cbCol.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;    
-
-            this.dgvPickNumber.Columns.Insert(0, cbCol);
-            this.dgvPickNumber.Columns[0].HeaderText = "";
-            this.dgvPickNumber.Columns[1].HeaderText = "No";
-            this.dgvPickNumber.Columns[2].HeaderText = "號碼";
-            this.dgvPickNumber.Columns[1].Width = 50;
-            this.dgvPickNumber.Columns[2].Width = 350;
-
-            chkAll.Tag = "chkPickNumber";
-            chkAll.Size = new Size(15, 15);
-            chkAll.Padding = new Padding(0);
-            chkAll.Margin = new Padding(0);
-            this.dgvPickNumber.Controls.Add(chkAll);
-
-            //取消排序功能
-            foreach (DataGridViewColumn col in this.dgvPickNumber.Columns)
-            {
-                col.SortMode = DataGridViewColumnSortMode.NotSortable;
-            }
+            this.lvPickNumber.Columns.Add("CheckAll", "");
+            this.lvPickNumber.Columns.Add("No", "No");
+            this.lvPickNumber.Columns.Add("Number", "號碼");
+            
+            this.lvPickNumber.AutoResizeColumn(0, ColumnHeaderAutoResizeStyle.HeaderSize);
+            this.lvPickNumber.Columns[1].Width = 50;
+            this.lvPickNumber.Columns[2].Width = 350;
 
             //2,下注區
-            dtBettingArea = dtPickNum.Copy();
-            dtBettingArea.Columns.Add("status");
-            dtBettingArea.Columns.Add("prize_number");
-            this.dgvBetArea.DataSource = dtBettingArea;
+            this.lvBetArea.Columns.Add("CheckAll", "");
+            this.lvBetArea.Columns.Add("No", "No"); ;
+            this.lvBetArea.Columns.Add("Number", "號碼");
+            this.lvBetArea.Columns.Add("result", "兌獎結果");
+            this.lvBetArea.Columns.Add("PrizeNumber", "中獎號碼");
 
-            //建立DGV列首CheckBox欄
-            DataGridViewCheckBoxColumn cbCol2 = new DataGridViewCheckBoxColumn();
-            cbCol2.Width = 50;
-            cbCol2.Name = "chkBxSelect";
-            cbCol2.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;   
-           
-            this.dgvBetArea.Columns.Insert(0, cbCol2);
-            this.dgvBetArea.Columns[0].HeaderText = "";
-            this.dgvBetArea.Columns[1].HeaderText = "No";
-            this.dgvBetArea.Columns[2].HeaderText = "號碼";
-            this.dgvBetArea.Columns[3].HeaderText = "狀態";
-            this.dgvBetArea.Columns[4].HeaderText = "中獎號碼";
-            this.dgvBetArea.Columns[1].Width = 25;
-            this.dgvBetArea.Columns[1].Width = 30;
-            this.dgvBetArea.Columns[2].Width = 160;
-            this.dgvBetArea.Columns[3].Width = 60;
-            this.dgvBetArea.Columns[4].Width = 160;
+            this.lvBetArea.AutoResizeColumn(0, ColumnHeaderAutoResizeStyle.HeaderSize);
+            this.lvBetArea.Columns[1].Width = 50;
+            this.lvBetArea.Columns[2].Width = 160;
+            this.lvBetArea.Columns[3].Width = 60;
+            this.lvBetArea.Columns[4].Width = 160;
 
-            chkAll2.Tag = "chkBet";
-            chkAll2.Size = new Size(15, 15);
-            chkAll2.Padding = new Padding(0);
-            chkAll2.Margin = new Padding(0);
-            this.dgvBetArea.Controls.Add(chkAll2);
             UpdateBetStatus();
-
-            //取消排序功能
-            foreach (DataGridViewColumn col in this.dgvBetArea.Columns)
-            {
-                col.SortMode = DataGridViewColumnSortMode.NotSortable;
-            }
-        }
-
-        private void dgvPickNumber_CellContentClick(object sender, DataGridViewCellEventArgs e)
-        {
-            DataGridView dgv = (DataGridView)sender;
-            if (dgv.CurrentCell.ColumnIndex != 0) return;
-
-            DataGridViewCheckBoxCell CellCheck = ((DataGridViewCheckBoxCell)dgv.Rows[e.RowIndex].Cells["chkBxSelect"]);
-            CellCheck.Value = !(bool)CellCheck.FormattedValue;
         }
 
         private void Button_Click(object sender, EventArgs e)
         {
-            if (sender.Equals(this.btnPickNumber))
+            if (sender.Equals(this.btnToBettingArea))
             {
-                PickNumber frm1 = new PickNumber();
-                frm1.ShowDialog(this);  //这个this必不可少（将窗体显示为具有指定所有者：窗体frm1的所有者是PickNumber类当前的对象）
-                this.dgvPickNumber.DataSource = dtPickNum;
-            }
-            else if (sender.Equals(this.btnToBettingArea))
-            {
-                List<int> SelectedRows = GetSelectedDataRows(this.dgvPickNumber);
-
-                for (int intA = 0; intA < SelectedRows.Count; intA++)
+                for (int intA = this.lvPickNumber.CheckedItems.Count - 1; intA >= 0; intA--)
                 {
-                    dtBettingArea.Rows.Add(dtBettingArea.Rows.Count + 1, dtPickNum.Rows[SelectedRows[intA]]["item"].ToString());
+                    ListViewItem objItem = new ListViewItem();
+                    objItem.SubItems.Add((this.lvBetArea.Items.Count + 1).ToString());
+                    objItem.SubItems.Add(this.lvPickNumber.CheckedItems[intA].SubItems[2].Text);
+                    this.lvBetArea.Items.Add(objItem);
+
+                    this.lvPickNumber.Items.Remove(this.lvPickNumber.CheckedItems[intA]);
                 }
 
-                DgvRowDel(SelectedRows, ref dtPickNum);
-                this.dgvBetArea.DataSource = dtBettingArea;
+                UpdateListViewNo(ref this.lvPickNumber);
                 UpdateBetStatus();
             }
             else if (sender.Equals(this.btnRedeem))
@@ -177,48 +130,59 @@ namespace WindowsFormsApplication1
                 //this.lblDrawing.Text = sDrawing;
                 #endregion
 
-                if (dtHistroy.Rows[0]["獎號"].ToString().Trim() == "")
+                if (dtLottoHistroy.Rows[0]["獎號"].ToString().Trim() == "")
                 {
                     MessageBox.Show("無法讀取到兌獎資訊，請稍後再嘗試");
                     return;
                 }
 
-                this.lblDrawing.Text = dtHistroy.Rows[0]["獎號"].ToString().Trim();
-                this.lblDrawingSpcl.Text = dtHistroy.Rows[0]["特別號"].ToString().Trim();
+                this.lblDrawing.Text = dtLottoHistroy.Rows[0]["獎號"].ToString().Trim();
+                this.lblDrawingSpcl.Text = dtLottoHistroy.Rows[0]["特別號"].ToString().Trim();
 
                 Redeem();
             }
-            else if (sender.Equals(this.btnHistory))
+            else if (sender.Equals(this.btnPickNumber))
             {
-                if (dtHistroy.Rows.Count < 1)
+                PickNumber frm1 = new PickNumber();
+                frm1.ShowDialog(this);  //這個this必不可少（將視窗顯示為具有指定所有者：視窗frm1的所有者是PickNumber類當前的對象）
+            }
+            else if (sender.Equals(this.btnLottoHistory))
+            {
+                if (dtLottoHistroy.Rows.Count < 1)
                 {
                     MessageBox.Show("無法讀取到兌獎資訊，請稍後再嘗試");
                     return;
                 }
 
-                History frm1 = new History(dtHistroy);
+                History frm1 = new History(dtLottoHistroy);
                 frm1.ShowDialog();
             }
             else if (sender.Equals(this.btnPickNumDel))
             {
-                DgvRowDel(GetSelectedDataRows(this.dgvPickNumber), ref dtPickNum);
-                this.dgvPickNumber.DataSource = dtPickNum;
+                for (int intA = this.lvPickNumber.CheckedItems.Count - 1; intA >= 0; intA--)
+                {
+                    this.lvPickNumber.Items.Remove(this.lvPickNumber.CheckedItems[intA]);
+                }
+
+                UpdateListViewNo(ref this.lvPickNumber);
             }
             else if (sender.Equals(this.btnBetDel))
             {
-                DgvRowDel(GetSelectedDataRows(this.dgvBetArea), ref dtBettingArea);
+                for (int intA = this.lvBetArea.CheckedItems.Count - 1; intA >= 0; intA--)
+                {
+                    this.lvBetArea.Items.Remove(this.lvBetArea.CheckedItems[intA]);
+                }
+
+                UpdateListViewNo(ref this.lvBetArea);
                 UpdateBetStatus();
             }
             else if (sender.Equals(this.btnPickNumDelAll))
             {
-                dtPickNum.Clear();
-                this.dgvPickNumber.DataSource = dtPickNum;
+                this.lvPickNumber.Items.Clear();
             }
-            
             else if (sender.Equals(this.btnBetDelAll))
             {
-                dtBettingArea.Clear();
-                this.dgvBetArea.DataSource = dtBettingArea;
+                this.lvBetArea.Items.Clear();
                 UpdateBetStatus();
             }
         }
@@ -226,7 +190,7 @@ namespace WindowsFormsApplication1
         /// <summary>抓取大樂透網頁的開獎資料</summary>
         private void GetLottoData()
         {
-            dtHistroy = new DataTable();
+            dtLottoHistroy = new DataTable();
 
             memoryStream = new MemoryStream(webClient.DownloadData(@"https://www.taiwanlottery.com.tw/Lotto/Lotto649/history.aspx"));
             HtmlAgilityPack.HtmlDocument doc = new HtmlAgilityPack.HtmlDocument();
@@ -241,24 +205,24 @@ namespace WindowsFormsApplication1
 
             foreach (HtmlNode col in docTalbeCol.DocumentNode.SelectNodes(@"//tr[1]/td[@class='td_org1']"))
             {
-                dtHistroy.Columns.Add(col.InnerText.Trim());
+                dtLottoHistroy.Columns.Add(col.InnerText.Trim());
             }
 
-            dtHistroy.Columns.Add("獎號");
-            dtHistroy.Columns.Add("特別號");
+            dtLottoHistroy.Columns.Add("獎號");
+            dtLottoHistroy.Columns.Add("特別號");
 
             //新增每期開獎資料
             foreach (HtmlNode tr in docData.DocumentNode.SelectNodes(@"/tr/td/table/tr[2]"))
             {
-                dtHistroy.Rows.Add(tr.SelectNodes(@"td[@class='td_w']").Select(aa => aa.InnerText.Trim()).ToArray());
+                dtLottoHistroy.Rows.Add(tr.SelectNodes(@"td[@class='td_w']").Select(aa => aa.InnerText.Trim()).ToArray());
             }
 
             HtmlNodeCollection Data = docData.DocumentNode.SelectNodes(@"/tr/td/table/tr[5]");
             for (int intA = 0; intA < Data.Count; intA++)
             {
                 string[] sPara = Data[intA].SelectNodes(@"td[@class='td_w font_black14b_center']").Select(aa => aa.InnerText.Trim()).ToArray();
-                dtHistroy.Rows[intA]["獎號"] =  string.Join("　", sPara);
-                dtHistroy.Rows[intA]["特別號"] =  Data[intA].SelectSingleNode(@"td[@class='td_w font_red14b_center']").InnerText.Trim();
+                dtLottoHistroy.Rows[intA]["獎號"] =  string.Join("　", sPara);
+                dtLottoHistroy.Rows[intA]["特別號"] =  Data[intA].SelectSingleNode(@"td[@class='td_w font_red14b_center']").InnerText.Trim();
             }
         }
 
@@ -266,9 +230,11 @@ namespace WindowsFormsApplication1
         private bool Redeem() 
         {
             string[] sArrDrawing = this.lblDrawing.Text.Split('　');//開獎號碼
-            for (int intA = 0; intA < dtBettingArea.Rows.Count; intA++)
+            for (int intA = 0; intA < this.lvBetArea.Items.Count; intA++)
             {
-                string[] Items = dtBettingArea.Rows[intA]["item"].ToString().Split('　');
+                ListViewItem objItem = this.lvBetArea.Items[intA]; 
+
+                string[] Items = objItem.SubItems[1].ToString().Split('　');
                 string sWinningNumbers = "";//中獎號碼
                 bool IsWinningSpclNumber = false;//是否中特別號
                 int iWinningCnt = 0;
@@ -281,8 +247,8 @@ namespace WindowsFormsApplication1
                         iWinningCnt++;
                     }   
 	            }
-                
-                if (dtBettingArea.Rows[intA]["item"].ToString().Contains(this.lblDrawingSpcl.Text))
+
+                if (objItem.SubItems[2].Text.Contains(this.lblDrawingSpcl.Text))
                 {
                     IsWinningSpclNumber = true;
                 }
@@ -314,95 +280,114 @@ namespace WindowsFormsApplication1
                 }
 
                 if (IsWinningSpclNumber) sWinningNumbers += this.lblDrawingSpcl.Text;
-                dtBettingArea.Rows[intA]["prize_number"] = sWinningNumbers;
-                dtBettingArea.Rows[intA]["status"] = result;
+                objItem.SubItems.Add(result);
+                objItem.SubItems.Add(sWinningNumbers);
             }
-            
-            this.dgvBetArea.DataSource = dtBettingArea;
-
+          
             return true;
         }
-
-        private void DgvRowDel(List<int> SelectedRows, ref DataTable refDt) 
+       
+        private void UpdateListViewNo(ref ListView objLv)
         {
-            for (int intA = SelectedRows.Count - 1; intA >= 0; intA--)
+            for (int intA = 0; intA < objLv.Items.Count; intA++)
             {
-                refDt.Rows.RemoveAt(SelectedRows[intA]);
+                objLv.Items[intA].SubItems[1].Text = (intA + 1).ToString();
             }
-
-            //對序號列填充，從1遞增
-            for (int intA = 0; intA < refDt.Rows.Count; intA++)
-            {
-                refDt.Rows[intA]["No"] = intA + 1;
-            }
-        }
-
-        private List<int> GetSelectedDataRows(DataGridView dgv) 
-        {
-            List<int> SelectedRows = new List<int>();
-
-            for (int intA = 0; intA < dgv.Rows.Count; intA++)
-            {
-                DataGridViewCheckBoxCell chkCell = (DataGridViewCheckBoxCell)dgv.Rows[intA].Cells["chkBxSelect"];
-                if (Convert.ToBoolean(chkCell.FormattedValue))
-                {
-                    SelectedRows.Add(intA);
-                }
-            }
-            
-            return SelectedRows;
-        }
+        } 
 
         private void UpdateBetStatus() 
         {
-            this.lblBetStatus.Text = string.Format("每注50 共{0}注 金額{1}元", this.dgvBetArea.Rows.Count, 50 * this.dgvBetArea.Rows.Count);
+            this.lblBetStatus.Text = string.Format("每注50 共{0}注 金額{1}元", this.lvBetArea.Items.Count, 50 * this.lvBetArea.Items.Count);
         }
 
         public void AddPickNumber(string sSelectedText)
         {
-            dtPickNum.Rows.Add(dtPickNum.Rows.Count + 1, sSelectedText);
+            ListViewItem objItem = new ListViewItem();
+            objItem.SubItems.Add((this.lvPickNumber.Items.Count + 1).ToString());
+            objItem.SubItems.Add(sSelectedText);
+        
+            this.lvPickNumber.Items.Add(objItem);
         }
 
-        private void dgvPickNumber_CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
-        {//繪製全選CheckBox
-            DataGridView dgv = (DataGridView)sender;
-            CheckBox chk = new CheckBox();
-            if (dgv.Name.Contains("Pick"))
-            {
-                chk = chkAll;
-            }
-            else
-            {
-                chk = chkAll2;
-            }
-
-            Rectangle oRectangle = dgv.GetCellDisplayRectangle(0, -1, true);
-            Point oPoint = new Point();
-            
-            oPoint.X = oRectangle.Location.X + (oRectangle.Width - chk.Width) / 2 + 1;
-            oPoint.Y = oRectangle.Location.Y + (oRectangle.Height - chk.Height) / 2 + 1;
-            chk.Location = oPoint;   
-        }
-
-        private void chkAll_MouseClick(object sender, MouseEventArgs e)
+        private void ListView_ColumnClick(object sender, ColumnClickEventArgs e)
         {
-            CheckBox checkbox = (CheckBox)sender;
-            DataGridView dgv;
-            if (checkbox.Tag.ToString().Contains("Pick"))
+            if (e.Column == 0)
             {
-                dgv = this.dgvPickNumber;
+                ListView objListView = ((ListView)sender);
+                bool value = false;
+                value = Convert.ToBoolean(objListView.Columns[e.Column].Tag);
+
+                objListView.Columns[e.Column].Tag = !value;
+                foreach (ListViewItem item in objListView.Items)
+                {
+                    item.Checked = !value;
+                }
+            }
+        }
+
+        private void ListView_DrawColumnHeader(object sender, DrawListViewColumnHeaderEventArgs e)
+        {
+            if (e.ColumnIndex == 0)
+            {
+                e.DrawBackground();
+                bool value = false;
+                value = Convert.ToBoolean(e.Header.Tag);
+
+                CheckBoxRenderer.DrawCheckBox(e.Graphics, 
+                    new Point(e.Bounds.Left + 4, e.Bounds.Top + 4),
+                    value ? System.Windows.Forms.VisualStyles.CheckBoxState.CheckedNormal :
+                    System.Windows.Forms.VisualStyles.CheckBoxState.UncheckedNormal);
             }
             else
             {
-                dgv = this.dgvBetArea;
+                e.DrawDefault = true;
             }
-
-            foreach (DataGridViewRow row in dgv.Rows)
-            {
-                ((DataGridViewCheckBoxCell)row.Cells[0]).Value = checkbox.Checked;
-            }
-
-            dgv.RefreshEdit();
         }
+        
+        private void ListView_DrawSubItem(object sender, DrawListViewSubItemEventArgs e)
+        {
+            e.DrawDefault = true;
+        }
+
+        private void ListView_DrawItem(object sender, DrawListViewItemEventArgs e)
+        {
+            e.DrawDefault = true;
+        }
+
+        # region GetCtrArray 列舉控制項
+        /// <summary>
+        /// 遞迴取得Form中控制項
+        /// </summary>
+        /// <param name="obj"></param>
+        /// <returns></returns>
+        private List<Control> GetAllControls(object obj)
+        {
+            List<Control> CtrList = new List<Control>();
+
+            ToCtrList(obj, ref CtrList);
+
+            return CtrList;
+        }
+
+        private void ToCtrList(object obj, ref List<Control> CtrList)
+        {
+            if (obj is Form)
+            {
+                foreach (Control ctr in ((Form)obj).Controls)
+                {
+                    CtrList.Add(ctr);
+                    if (ctr.HasChildren) ToCtrList(ctr, ref CtrList);
+                }
+            }
+            else
+            {
+                foreach (Control ctr in ((Control)obj).Controls)
+                {
+                    CtrList.Add(ctr);
+                    if (ctr.HasChildren) ToCtrList(ctr, ref CtrList);
+                }
+            }
+        }
+        #endregion
     }
 }
